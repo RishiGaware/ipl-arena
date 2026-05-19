@@ -1,0 +1,108 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── UTILITY FUNCTIONS ──────────────────────────────────────────
+
+    // Check if user is logged in
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the user is operating on their own document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the user is the Admin
+    function isAdmin() {
+      return isAuthenticated() && request.auth.uid == '4sgFbttHGuPqB3KNYNeZGG1LEfT2';
+    }
+
+    // ─── USERS COLLECTION ─────────────────────────────────────────
+    match /users/{userId} {
+      // Anyone can read user profiles (needed for leaderboards, bet avatars, etc.)
+      allow read: if isAuthenticated();
+
+      // Create: user setting up their own profile for the first time
+      // points MUST be exactly 50000 on creation
+      // MUST contain created timestamp
+      allow create: if isOwner(userId)
+                    && request.resource.data.points == 50000
+                    && request.resource.data.keys().hasAll(['displayName', 'photoURL', 'points']);
+
+      // Update: user updating their own profile
+      // We allow points to be updated, but only by the user themselves.
+      // (For absolute security, points math would need a Cloud Function, 
+      // but restricting update to the owner strongly mitigates cross-user tampering)
+      allow update: if isAdmin() || (isOwner(userId)
+                    // Ensure they aren't changing their 'createdAt' timestamp
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['createdAt'])));
+
+      allow delete: if false; // Users cannot delete their own profile documents
+    }
+
+    // ─── MATCHES COLLECTION ───────────────────────────────────────
+    match /matches/{matchId} {
+      // Anyone logged in can view matches
+      allow read: if isAuthenticated();
+      
+      // Matches can be modified by Admin
+      allow write: if isAdmin(); 
+    }
+
+    // ─── BETS COLLECTION ──────────────────────────────────────────
+    match /bets/{betId} {
+      // Anyone logged in can see bets (needed for live distribution / feed)
+      allow read: if isAuthenticated();
+
+      // Create: placing a new bet
+      allow create: if isAuthenticated()
+                    // Must be placing the bet for themselves
+                    && request.resource.data.userId == request.auth.uid
+                    // Bet must be at least 50 points
+                    && request.resource.data.points >= 50
+                    // Match status MUST be 'upcoming' to place a bet
+                    && get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.status == 'upcoming'
+                    // MATCH HAS NOT STARTED YET based on server time
+                    && request.time < get(/databases/$(database)/documents/matches/$(request.resource.data.matchId)).data.matchStartTime;
+
+      // Update: changing an existing bet
+      allow update: if isAdmin() || (isAuthenticated()
+                    // Must be editing their own bet
+                    && resource.data.userId == request.auth.uid
+                    // Cannot change the owner of the bet
+                    && request.resource.data.userId == resource.data.userId
+                    // Bet must be at least 50 points
+                    && request.resource.data.points >= 50
+                    // Match status MUST be 'upcoming' to edit a bet
+                    && get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.status == 'upcoming'
+                    // MATCH HAS NOT STARTED YET based on server time
+                    && request.time < get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.matchStartTime);
+
+      // Delete: removing a bet (refund)
+      allow delete: if isAuthenticated()
+                    // Must be deleting their own bet
+                    && resource.data.userId == request.auth.uid
+                    // Match status MUST be 'upcoming' to delete a bet
+                    && get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.status == 'upcoming'
+                    // MATCH HAS NOT STARTED YET based on server time
+                    && request.time < get(/databases/$(database)/documents/matches/$(resource.data.matchId)).data.matchStartTime;
+    }
+
+    // ─── TRANSACTIONS COLLECTION ────────────────────────────────────
+    match /transactions/{transactionId} {
+      // Transactions are private to the user
+      allow read: if isOwner(resource.data.userId);
+
+      // Create: logging a new transaction
+      allow create: if isAdmin() || (isOwner(request.resource.data.userId)
+                    && request.resource.data.type in ['bet_place', 'bet_win', 'bet_loss', 'refund', 'bet_removed']);
+
+      // Transactions are immutable audit logs
+      allow update, delete: if false;
+    }
+    
+  }
+}

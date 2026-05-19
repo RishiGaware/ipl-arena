@@ -1,0 +1,26 @@
+[
+  {
+    "teamA": 210,
+    "teamB": 208,
+    "venue": "Dharamshala",
+    "matchStartTime": "2026-05-26T19:00:00Z"
+  },
+  {
+    "teamA": 204,
+    "teamB": 206,
+    "venue": "New Chandigarh",
+    "matchStartTime": "2026-05-27T19:00:00Z"
+  },
+  {
+    "teamA": 201,
+    "teamB": 209,
+    "venue": "New Chandigarh",
+    "matchStartTime": "2026-05-29T19:00:00Z"
+  },
+  {
+    "teamA": 203,
+    "teamB": 207,
+    "venue": "Ahmedabad",
+    "matchStartTime": "2026-05-31T19:00:00Z"
+  }
+]
