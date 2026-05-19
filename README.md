@@ -9,7 +9,7 @@ Welcome to **IPL Arena** — a real-time, interactive prediction and virtual bet
 > * 🏢 **Office & Workplace Circles:** Elevate your water-cooler chat and team Slack channels into friendly competitions with your colleagues!
 > * ✈️ **Long-Distance Friend Groups:** Stay connected across cities and timezones, keeping the tournament banter alive no matter how far apart you are!
 > * 🪙 **Risk-Free Coin Betting:** Settle predictions and rise through the ranks completely risk-free using our dynamic virtual coin system!
-
+ 
 Whether you want to test your instincts, climb the live leaderboard, or trigger a dynamic winning team theme sync, IPL Arena creates a shared space for the ultimate cricketing fellowship. 🏆🔥
 
 ---
